@@ -1,0 +1,138 @@
+body {
+    font-family: Arial, sans-serif;
+    background-color: #f9fafb;
+    margin: 0;
+    padding: 0;
+}
+
+.container {
+    position: relative;
+    min-height: 100vh;
+    overflow: hidden;
+}
+
+.img-azul {
+    position: absolute;
+    top: 4rem;
+    left: 0;
+    height: 24rem;
+    object-fit: contain;
+}
+
+.img-preto {
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    height: 24rem;
+    object-fit: contain;
+}
+
+.navbar {
+    display: flex;
+    align-items: center;
+    background: white;
+    height: 4rem;
+    width: 100%;
+    position: relative;
+    z-index: 10;
+}
+
+.navbar img {
+    height: 4rem; 
+    width: auto; 
+    margin-left: 2rem; 
+}
+
+.vagas {
+    display: flex;
+    justify-content: flex-end;
+    padding: 1rem 1.5rem;
+    position: relative;
+    z-index: 10;
+}
+
+.vagas-box {
+    background: #374151;
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+.main {
+    max-width: 900px;
+    margin-left: 10rem;
+    margin-top: 2rem;
+    padding: 2rem;
+    position: relative;
+    z-index: 10;
+}
+
+.bem-vindo {
+    color: #4b5563;
+    font-size: 1.2rem;
+    margin-bottom: 0.5rem;
+}
+
+.titulo {
+    font-size: 3rem;
+    font-weight: bold;
+}
+
+.azul {
+    color: #2563eb;
+}
+
+.cinza {
+    color: #1f2937;
+}
+
+.texto {
+    margin-top: 1.5rem;
+    color: #374151;
+    line-height: 1.7;
+}
+
+.negrito {
+    font-weight: 600;
+}
+
+.destaque {
+    font-weight: bold;
+    color: #111827;
+    margin-top: 1rem;
+}
+
+.botoes {
+    display: flex;
+    gap: 1rem;
+    margin-top: 2rem;
+}
+
+.btn {
+    padding: 0.8rem 2rem;
+    font-size: 1.1rem;
+    text-decoration: none;
+    border-radius: 8px;
+    font-weight: 500;
+    transition: 0.2s;
+}
+
+.btn-primario {
+    background: #2563eb;
+    color: white;
+}
+
+.btn-primario:hover {
+    background: #1e40af;
+}
+
+.btn-secundario {
+    background: #374151;
+    color: white;
+}
+
+.btn-secundario:hover {
+    background: #1f2937;
+}
