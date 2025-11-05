@@ -74,9 +74,12 @@ body {
 
 .nav-icons {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
+  /* justify-content: space-between; */
+  align-items: flex-start;
   margin-bottom: 0.5rem;
+}
+.nav-icons .nav-icon:nth-child(n+2) {
+  margin-left: 31.5rem;
 }
 
 .nav-icon {
@@ -137,6 +140,7 @@ body {
   color: #374151;
   margin-bottom: 0;
 }
+
 
 .nav-label-title.active {
   color: #1f2937;

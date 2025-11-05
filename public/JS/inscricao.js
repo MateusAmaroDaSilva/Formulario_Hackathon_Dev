@@ -1,3 +1,5 @@
+
+
 const technicalQuestions = {
   "Front-End": {
     facil: [
@@ -535,17 +537,40 @@ btnBack.addEventListener("click", () => {
   }
 })
 
-btnNext.addEventListener("click", () => {
+btnNext.addEventListener("click", async (e) => {
   const currentIndex = tabs.findIndex((t) => t.id === formState.activeTab)
 
   if (formState.activeTab === "questions" && formState.userAnswers.length === 6) {
+
+    e.preventDefault();
     // Finalizar formulário e mostrar tela de agradecimento
     console.log("Formulário enviado:", formState.formData)
     console.log("Área selecionada:", formState.selectedArea)
     console.log("Respostas:", formState.userAnswers)
 
-    mainContainer.style.display = "none"
-    thankYouScreen.style.display = "flex"
+    const payload = {
+      formData: formState.formData,
+      selectedArea: formState.selectedArea,
+      userAnswers: formState.userAnswers,
+    };
+
+    console.log("Enviando payload:", payload);
+
+    try {
+      const response = await axios.post('http://127.0.0.1:8000/api/submit-quiz', payload);
+      console.log(response.data.message);
+      mainContainer.style.display = "none"
+      thankYouScreen.style.display = "flex"
+    } catch (error) {
+      console.error("Erro ao enviar formulário:", error);
+      if (error.response && error.response.data && error.response.data.errors) {
+        alert("Erro de validação: " + JSON.stringify(error.response.data.errors));
+      } else if (error.response && error.response.data && error.response.data.error) {
+        alert("Erro: " + error.response.data.error);
+      } else {
+        alert("Houve um erro inesperado. Tente novamente.");
+      }
+    }
   } else if (validateTab(formState.activeTab) && currentIndex < tabs.length - 1) {
     changeTab(tabs[currentIndex + 1].id)
   }
