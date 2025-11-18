@@ -6,7 +6,7 @@
     <img src="{{ asset('img/preto.png') }}" alt="" class="img-preto">
 
     <nav class="navbar">
-        <img src="{{ asset('img/logo.ico') }}" alt="">
+        <img src="{{ asset('img/parceiros/4.png') }}" alt="">
     </nav>
 
     <div class="vagas">
@@ -18,7 +18,7 @@
             <div>
                 <p class="bem-vindo">Bem vindo ao</p>
                 <h1 class="titulo">
-                    <span class="azul">Hackathon</span>
+                    <span class="azul">HackHealth</span>
                     <span class="cinza">DevMenthors</span>
                 </h1>
             </div>
@@ -27,7 +27,7 @@
                 <p>
                     O <span class="azul negrito">DevMenthors</span>, com o apoio da Universidade de Marília -
                     Unimar e de empresas líderes da cidade, tem a honra de apresentar um evento único: um
-                    <span class="azul negrito">Hackathon</span> épico de
+                    <span class="azul negrito">HackHealth</span> épico de
                     <span class="azul negrito">30 horas</span>. Mais do que uma competição, é uma imersão
                     total para mentes criativas e apaixonadas por tecnologia.
                 </p>
@@ -52,6 +52,7 @@
 
                 <p class="destaque">Inscreva-se e garanta seu lugar neste grande desafio!</p>
             </div>
+
 
             <div class="botoes">
                 <a href="{{ route('inscricao') }}" class="btn btn-primario">Inscrever-se</a>

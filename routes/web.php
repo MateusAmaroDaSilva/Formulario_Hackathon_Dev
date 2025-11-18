@@ -5,6 +5,7 @@ use App\Http\Controllers\DevMenthorsController;
 use App\Models\FormSubmission;
 use Rap2hpoutre\FastExcel\FastExcel;
 use App\Http\Controllers\AdminDashboardController;
+use App\Http\Controllers\HacktonMentores;
 
 Route::get('/admin/dashboard/excel', [AdminDashboardController::class, 'index']);
 
@@ -46,10 +47,19 @@ Route::get('/', function () {
     return view('welcome');
 });
 
-Route::get('/hackathon', function () {
+Route::get('/registrar', function () {
+    return view('vagas');
+});
+
+Route::get('/hackhealth', function () {
     return view('hackathon');
 });
 
 Route::get('/inscricao', function () {
     return view('inscricao');
 })->name('inscricao');
+
+
+Route::get('hackathon/mentor/cadastrar', [HacktonMentores::class, 'create'])->name('hackathon.mentor.create');
+
+Route::post('hackathon/mentor/cadastrar', [HacktonMentores::class, 'store'])->name('hackathon.mentor.store');

@@ -8,23 +8,23 @@
             <svg class="thank-you-icon" xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
             <h1>Obrigado!</h1>
             <p class="thank-you-subtitle">Sua inscrição foi enviada com sucesso.</p>
-            <p class="thank-you-message">Boa sorte no DevMenthors Hackathon!</p>
+            <p class="thank-you-message">Boa sorte no DevMenthors HackHealth!</p>
         </div>
     </div>
 
     <div class="container" id="mainContainer">
-        <div class="form-wrapper"> 
+        <div class="form-wrapper">
             <div class="header">
             <div class="logo">
                     <div class="logo-icon">
-                      <img src="{{ asset('img/logo.ico') }}" alt="" class="logo" />
+                      <img src="{{ asset('img/parceiros/5.png') }}" alt="" class="logo" />
                     </div>
             </div>
                 <span class="logo-text">DevMenthors</span>
             </div>
             <div class="navigation">
                 <div class="nav-icons">
-                    
+
                     <div class="nav-icon active" data-tab="personal">
                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="m16 3.13a4 4 0 0 1 0 7.75"/></svg>
                     </div>
@@ -54,7 +54,7 @@
                         <div class="nav-label-status">Pendente</div>
                     </div>
                 </div>
-            </div> 
+            </div>
             <form id="devmenthors-form">
                 <div class="tab-content active" data-tab="personal">
                     <div class="form-grid">
@@ -126,7 +126,7 @@
                     <div class="area-selection">
                         <h2>Selecione sua área de interesse</h2>
                         <p class="area-description">Escolha a área em que você tem mais experiência ou interesse para responder perguntas técnicas específicas.</p>
-                        
+
                         <div class="area-options">
                             <label class="area-option">
                                 <input type="radio" name="selectedArea" value="Front-End">
