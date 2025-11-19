@@ -1,27 +1,35 @@
 <?php
 
-namespace App\Http\Controllers\Api;
+namespace App\Http\Controllers\Api; // <--- 1. Namespace correto (pasta Api)
 
+use App\Http\Controllers\Controller; // <--- 2. IMPORTANTE: Importa o Controller pai
 use App\Models\FormSubmission;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Http;
-use Validator;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Config;
+use Illuminate\Support\Facades\Log;
 
-class FormSubmissionController
+class FormSubmissionController extends Controller
 {
     public function store(Request $request)
     {
+        // 1. BLOQUEIO DE SEGURANÇA
+        if (FormSubmission::count() >= 300) {
+            return response()->json(['error' => 'Inscrições encerradas. Limite de vagas atingido.'], 403);
+        }
+
+        // 2. VALIDAÇÃO
         $validator = Validator::make($request->all(), [
             'formData.nome' => 'required|string|max:255',
-            'formData.email' => 'required|email|max:255|unique:form_submissions,email',
+            'formData.email' => 'required|email|max:255',
             'formData.telefone' => 'required|string|max:20',
-            'formData.nascimento' => 'required|date|before:today',
-            'formData.sexo' => 'required|string|max:50',
-            'formData.estado' => 'required|string|max:100',
-            'formData.cidade' => 'required|string|max:100',
-            'formData.curso' => 'required|string|max:255',
-            'formData.linkedin' => 'nullable|string|url:http,https|max:255',
-            'formData.sobre' => 'nullable|string|max:5000',
+            'formData.nascimento' => 'required|date',
+            'formData.sexo' => 'required|string',
+            'formData.estado' => 'required|string',
+            'formData.cidade' => 'required|string',
+            'formData.curso' => 'required|string',
+            'formData.linkedin' => 'nullable|string',
+            'formData.sobre' => 'nullable|string',
             'selectedArea' => 'required|string',
             'userAnswers' => 'required|array|size:6',
         ]);
@@ -30,37 +38,38 @@ class FormSubmissionController
             return response()->json(['errors' => $validator->errors()], 422);
         }
 
-        $formData = $request->input('formData');
-        $selectedArea = $request->input('selectedArea');
-        $userAnswers = $request->input('userAnswers');
-        $correctAnswers = \Config::get('questions.' . $selectedArea);
-
-        if (!$correctAnswers || count($correctAnswers) != 6) {
-            return response()->json(['error' => 'Configuração do questionário inválida no servidor.'], 500);
-        }
-
-        $score_facil = 0;
-        $score_media = 0;
-        $score_dificil = 0;
-
-        if ($userAnswers[0] == $correctAnswers[0]) $score_facil++;
-        if ($userAnswers[1] == $correctAnswers[1]) $score_facil++;
-        if ($userAnswers[2] == $correctAnswers[2]) $score_media++;
-        if ($userAnswers[3] == $correctAnswers[3]) $score_media++;
-        if ($userAnswers[4] == $correctAnswers[4]) $score_dificil++;
-        if ($userAnswers[5] == $correctAnswers[5]) $score_dificil++;
-
-        $score_total = $score_facil + $score_media + $score_dificil;
-
-        $nivel = 'Iniciante';
-        if ($score_total >= 3) {
-            $nivel = 'Intermediário';
-        }
-        if ($score_total >= 5) {
-            $nivel = 'Avançado';
-        }
-
         try {
+            $formData = $request->input('formData');
+            $selectedArea = $request->input('selectedArea');
+            $userAnswers = $request->input('userAnswers');
+
+            // Carrega gabarito
+            $correctAnswers = Config::get('questions.' . $selectedArea);
+
+            if (!$correctAnswers) {
+                throw new \Exception("Gabarito não encontrado no arquivo config/questions.php para a área: " . $selectedArea);
+            }
+
+            $score_facil = 0;
+            $score_medio_calc = 0;
+            $score_dificil = 0;
+
+            // Lógica de correção segura
+            for ($i = 0; $i < 6; $i++) {
+                // Verifica se as respostas existem e batem com o gabarito
+                if (isset($userAnswers[$i]) && isset($correctAnswers[$i]) && $userAnswers[$i] == $correctAnswers[$i]) {
+                    if ($i < 2) $score_facil++;
+                    elseif ($i < 4) $score_medio_calc++;
+                    else $score_dificil++;
+                }
+            }
+
+            $score_total = $score_facil + $score_medio_calc + $score_dificil;
+
+            $nivel = 'Iniciante';
+            if ($score_total >= 3) $nivel = 'Intermediário';
+            if ($score_total >= 5) $nivel = 'Avançado';
+
             $submission = FormSubmission::create([
                 'nome' => $formData['nome'],
                 'email' => $formData['email'],
@@ -76,23 +85,20 @@ class FormSubmissionController
                 'user_answers' => $userAnswers,
                 'score_total' => $score_total,
                 'score_facil' => $score_facil,
-                'score_media' => $score_media,
+                'score_medio' => $score_medio_calc,
                 'score_dificil' => $score_dificil,
                 'calculated_level' => $nivel,
             ]);
 
-            // N8N Webhook
-            Http::post('http://host.docker.internal:5678/webhook/hackathon-inscricao', [
-                'telefone' => $formData['telefone'],
-            ]);
+            return response()->json(['message' => 'Sucesso!', 'id' => $submission->id], 201);
 
         } catch (\Exception $e) {
             return response()->json([
-                'error' => 'Não foi possível salvar a resposta',
-                'details' => $e->getMessage()
-            ], 400);
+                'error' => 'Erro interno no servidor',
+                'message' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine()
+            ], 500);
         }
-
-        return response()->json(['message' => 'Respostas salvas com sucesso!'], 201);
     }
 }
