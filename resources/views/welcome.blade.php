@@ -923,7 +923,6 @@
 
                 <div class="tracks-content">
                     <div class="tracks-image">
-                        <!-- Imagem do Dashboard com largura corrigida -->
                         <div class="placeholder-image"><img src="{{ asset('img/dashboard.png') }}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 8px;"></div>
                     </div>
 
