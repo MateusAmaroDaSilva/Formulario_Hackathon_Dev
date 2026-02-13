@@ -93,16 +93,30 @@
                 <i class="fas fa-user-shield w-5 text-center"></i>
                 <span class="ml-3">Mentores</span>
             </a>
+
+            @if(Auth::guard('mentor')->user()->isAdmin())
+                <a href="{{ route('admin.logs.index') }}" class="sidebar-link flex items-center px-4 py-3 text-sm font-medium text-gray-600 rounded-lg transition-colors {{ Route::is('admin.logs.*') ? 'active' : '' }}">
+                    <i class="fas fa-history w-5 text-center"></i>
+                    <span class="ml-3">Logs de Auditoria</span>
+                </a>
+            @endif
         </nav>
 
         <div class="p-4 border-t border-gray-50 bg-gray-50/50">
             <a href="{{ route('mentor.perfil') }}" class="flex items-center gap-3 p-2 rounded-lg hover:bg-white hover:shadow-sm transition group mb-2">
                 @php
                     $mLogado = Auth::guard('mentor')->user();
-                    // Fallback de imagem caso o user não tenha foto
-                    $foto = $mLogado->foto_url ?? "https://ui-avatars.com/api/?name=".urlencode($mLogado->nome)."&background=random";
                 @endphp
-                <img src="{{ $foto }}" class="w-9 h-9 rounded-full object-cover border border-gray-200">
+                
+                {{-- FOTO DE PERFIL COM PROXY --}}
+                @if($mLogado->foto)
+                    <img src="{{ route('mentor.foto.proxy', basename($mLogado->foto)) }}" class="w-9 h-9 rounded-full object-cover border border-gray-200">
+                @else
+                     <div class="w-9 h-9 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold border border-blue-200 text-xs">
+                        {{ substr($mLogado->nome, 0, 2) }}
+                     </div>
+                @endif
+
                 <div class="flex-1 min-w-0">
                     <p class="text-sm font-bold text-gray-700 truncate group-hover:text-blue-600 transition">{{ $mLogado->nome }}</p>
                     <p class="text-xs text-gray-400 truncate">Mentor</p>

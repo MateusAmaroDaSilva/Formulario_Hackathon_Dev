@@ -36,16 +36,37 @@ class Mentor extends Authenticatable
         return $this->belongsToMany(Permission::class, 'mentor_permissions');
     }
     
+    /**
+     * Verifica se o mentor é Admin.
+     */
+    public function isAdmin()
+    {
+        return $this->funcao === 'Admin';
+    }
 
-    // Função auxiliar para verificar se tem a permissão
+    /**
+     * Verifica se tem uma permissão específica.
+     * Admins sempre têm todas as permissões.
+     */
     public function hasPermission($slug)
     {
-        // Se for Admin Supremo, tem acesso a tudo sempre
-        if ($this->funcao === 'Admin') {
+        if ($this->isAdmin()) {
             return true;
         }
 
         return $this->permissions->contains('slug', $slug);
+    }
+
+    /**
+     * Retorna todas as permissões do mentor.
+     * Para Admins, retorna TODAS as permissões disponíveis.
+     */
+    public function getAllPermissions()
+    {
+        if ($this->isAdmin()) {
+            return Permission::all();
+        }
+        return $this->permissions;
     }
 
     public function getFotoUrlAttribute()

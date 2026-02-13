@@ -5,27 +5,37 @@ namespace App\Http\Controllers;
 use Rap2hpoutre\FastExcel\FastExcel;
 use Illuminate\Http\Request;
 use App\Models\Aluno;
+use App\Models\SystemLog;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Auth; 
-use Illuminate\Support\Facades\Hash; 
-use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Auth; // IMPORTANTE: Necessário para o Login
+use Illuminate\Support\Facades\Hash; // IMPORTANTE: Necessário para a Senha
 
 class AlunoController extends Controller
 {
+    // ==========================================
+    // NOVAS FUNÇÕES DE LOGIN/LOGOUT (ADICIONADAS)
+    // ==========================================
+
     public function login(Request $request)
     {
         $credentials = $request->validate([
-            'email_aluno' => ['required', 'email'],
-            'password' => ['required']
+            'email_aluno' => ['required', 'email'], // Note que no seu Model é email_aluno
+            'password' => ['required'],
         ]);
 
+        // Mapear 'email_aluno' para 'email' ou passar array customizado se o attempt exigir 'email'
+        // O Auth::attempt espera chaves que batem com o banco, exceto password que ele trata.
+        // Como sua coluna chama 'email_aluno', precisamos passar assim:
         $authData = [
             'email_aluno' => $credentials['email_aluno'],
             'password' => $credentials['password']
         ];
 
+        // Usa o GUARD 'aluno'
         if (Auth::guard('aluno')->attempt($authData)) {
             $request->session()->regenerate();
+
+            // Redireciona para Dashboard do ALUNO
             return redirect()->intended(route('aluno.dashboard'));
         }
 
@@ -40,13 +50,16 @@ class AlunoController extends Controller
         return redirect('/');
     }
 
+    // ==========================================
+    // FUNÇÕES EXISTENTES (MANTIDAS/ATUALIZADAS)
+    // ==========================================
+
     public function export()
     {
         $alunos = Aluno::all();
         return (new FastExcel($alunos))->download('lista_novos_alunos_2026.xlsx', function ($aluno) {
             return [
                 'Nome Completo' => $aluno->nome_completo,
-                'CPF' => $aluno->cpf,
                 'Série' => str_replace(['_ano', '_em'], ['º Ano', 'ª Série'], $aluno->serie),
                 'Telefone Aluno' => $aluno->telefone_aluno,
                 'Telefone Responsável' => $aluno->telefone_responsavel,
@@ -62,20 +75,13 @@ class AlunoController extends Controller
 
     public function store(Request $request)
     {
-
-        $cpfLimpo = preg_replace('/[^0-9]/', '', $request->cpf);
-
-        if (Aluno::where('cpf', $cpfLimpo)->exists()) {
-            return redirect()->back()->withErrors(['cpf' => 'Este CPF já está cadastrado como aluno.'])->withInput();
-        }
-
-        Aluno::create([
+        // ATENÇÃO: Adicionei campos 'password' e 'status' para que o aluno consiga logar depois
+        DB::table('alunos')->insert([
             'nome_completo' => $request->nome_completo,
             'data_nascimento' => $request->data_nascimento,
             'serie' => $request->serie,
             'escola' => $request->escola,
             'email_aluno' => $request->email_aluno,
-            'cpf' => $cpfLimpo, 
             'telefone_aluno' => $request->telefone_aluno,
             'nome_responsavel' => $request->nome_responsavel,
             'email_responsavel' => $request->email_responsavel,
@@ -83,8 +89,20 @@ class AlunoController extends Controller
             'tem_conhecimento_previo' => $request->tem_conhecimento == '1' ? true : false,
             'descricao_conhecimento' => $request->descricao_conhecimento,
             'onde_nos_conheceu' => $request->onde_conheceu,
-            'password' => Hash::make('12345678'),
+
+            // Novos campos obrigatórios para login:
+            'password' => Hash::make('12345678'), // Senha padrão (você pode mudar lógica depois)
             'status' => 'ativo',
+
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        SystemLog::create([
+            'mentor_id' => Auth::guard('mentor')->id(),
+            'acao' => 'Gestão de Alunos',
+            'descricao' => 'Criou aluno: ' . $request->nome_completo,
+            'ip_address' => request()->ip(),
         ]);
 
         return redirect()->back()->with('success', true);
@@ -92,21 +110,40 @@ class AlunoController extends Controller
 
     public function index()
     {
-        $alunos = Aluno::orderBy('created_at', 'desc')->get();
+        // Carregar alunos com contagem de presenças
+        $alunos = Aluno::withCount('presencas')
+            ->orderBy('created_at', 'desc')
+            ->get();
+        
         $totalAlunos = $alunos->count();
         $totalComConhecimento = $alunos->where('tem_conhecimento_previo', true)->count();
+
+        // Pequena correção para evitar erro se não tiver alunos
         $ultimoInscrito = $alunos->first() ? $alunos->first()->created_at->format('d/m/Y') : 'Ninguém';
 
-        return view('mentor.alunos.index', compact('alunos', 'totalAlunos', 'totalComConhecimento', 'ultimoInscrito'));
+        // Total de chamadas para calcular média de presença
+        $totalChamadas = \App\Models\Chamada::count();
+
+        return view('mentor.alunos.index', compact('alunos', 'totalAlunos', 'totalComConhecimento', 'ultimoInscrito', 'totalChamadas'));
     }
 
     public function destroy($id)
     {
         $aluno = Aluno::findOrFail($id);
+        $nomeAluno = $aluno->nome_completo;
         $aluno->delete();
+        
+        SystemLog::create([
+            'mentor_id' => Auth::guard('mentor')->id(),
+            'acao' => 'Gestão de Alunos',
+            'descricao' => 'Excluiu aluno: ' . $nomeAluno,
+            'ip_address' => request()->ip(),
+        ]);
+        
         return back()->with('success', 'Aluno removido com sucesso!');
     }
 
+    // Método para baixar o modelo (Template)
     public function downloadTemplate()
     {
         $headers = [
@@ -117,62 +154,107 @@ class AlunoController extends Controller
             "Expires"             => "0"
         ];
 
-        $columns = ['nome_completo', 'cpf', 'data_nascimento', 'email_aluno', 'telefone_aluno', 'escola', 'serie', 'nome_responsavel', 'email_responsavel', 'telefone_responsavel'];
+        $columns = [
+            'nome_completo',
+            'data_nascimento (AAAA-MM-DD)',
+            'email_aluno',
+            'telefone_aluno',
+            'escola',
+            'serie (Ex: 9_ano, 3_em)',
+            'nome_responsavel',
+            'email_responsavel',
+            'telefone_responsavel'
+        ];
 
         $callback = function() use ($columns) {
             $file = fopen('php://output', 'w');
+
+            // Adiciona o BOM para o Excel abrir corretamente com acentos (UTF-8)
             fputs($file, "\xEF\xBB\xBF");
+
+            // Escreve o cabeçalho
             fputcsv($file, $columns, ';');
+
+            // Escreve uma linha de exemplo para o usuário entender o formato
             fputcsv($file, [
-                'Fulano da Silva', '00000000000', '2008-05-20', 'aluno@email.com', '11999998888',
-                'Escola Estadual X', '3_em', 'Pai do Fulano', 'pai@email.com', '11988887777'
+                'Fulano da Silva',
+                '2008-05-20',
+                'aluno@email.com',
+                '11999998888',
+                'Escola Estadual X',
+                '3_em',
+                'Pai do Fulano',
+                'pai@email.com',
+                '11988887777'
             ], ';');
+
             fclose($file);
         };
 
         return response()->stream($callback, 200, $headers);
     }
 
+    // Método para importar
     public function import(Request $request)
     {
-        $request->validate(['arquivo' => 'required|file|mimes:csv,txt']);
+        $request->validate([
+            'arquivo' => 'required|file|mimes:csv,txt',
+        ]);
+
         $file = $request->file('arquivo');
 
+        // Abre o arquivo em modo de leitura
         if (($handle = fopen($file->getPathname(), 'r')) !== false) {
+
+            // 1. Pula a primeira linha (Cabeçalho)
             fgetcsv($handle, 1000, ';');
+
+            // 2. Loop para ler linha por linha
+            // O parâmetro ';' define que o separador é ponto e vírgula
             while (($dados = fgetcsv($handle, 1000, ';')) !== false) {
+
+                // Validação simples para evitar linhas em branco
                 if (count($dados) < 5) continue;
+
+                // Mapeamento das colunas (baseado na ordem do Template)
+                // 0: Nome, 1: Data, 2: Email Aluno, 3: Tel Aluno, 4: Escola, 5: Série,
+                // 6: Nome Resp, 7: Email Resp, 8: Tel Resp
+
                 try {
-                    Aluno::create([
-                        'nome_completo'        => utf8_encode($dados[0]),
-                        'cpf'                  => preg_replace('/[^0-9]/', '', $dados[1]),
-                        'data_nascimento'      => $dados[2],
-                        'email_aluno'          => $dados[3] ?: null,
-                        'telefone_aluno'       => $dados[4],
-                        'escola'               => utf8_encode($dados[5]),
-                        'serie'                => $dados[6],
-                        'nome_responsavel'     => utf8_encode($dados[7]),
-                        'email_responsavel'    => $dados[8],
-                        'telefone_responsavel' => $dados[9],
-                        'password'             => Hash::make('12345678'),
+                    \App\Models\Aluno::create([
+                        'nome_completo'        => utf8_encode($dados[0]), // utf8_encode previne erros de acentuação
+                        'data_nascimento'      => $dados[1],
+                        'email_aluno'          => $dados[2] ?: null, // Se vazio, salva null
+                        'telefone_aluno'       => $dados[3],
+                        'escola'               => utf8_encode($dados[4]),
+                        'serie'                => $dados[5],
+                        'nome_responsavel'     => utf8_encode($dados[6]),
+                        'email_responsavel'    => $dados[7], // Campo obrigatório que estava dando erro antes
+                        'telefone_responsavel' => $dados[8],
+                        'password'             => '$2y$12$H/vNUWMtKJy5rUliqy8vHeZ8avg0nsNahitXJSNJ49W1swzhu5qMm', // Senha padrão (hash)
                         'status'               => 'ativo',
-                        'tem_conhecimento_previo' => false
+                        'tem_conhecimento_previo' => false // Padrão
                     ]);
                 } catch (\Exception $e) {
+                    // Se der erro em uma linha específica (ex: email duplicado),
+                    // continuamos para a próxima sem quebrar tudo.
+                    // Você pode logar o erro se quiser: Log::error($e->getMessage());
                     continue;
                 }
             }
+
             fclose($handle);
         }
+
         return back()->with('success', 'Importação concluída! Verifique a lista.');
     }
 
     public function update(Request $request, $id)
     {
         $aluno = Aluno::findOrFail($id);
+
         $dados = $request->validate([
             'nome_completo' => 'required|string|max:255',
-            'cpf' => 'required|string|max:14', 
             'data_nascimento' => 'required|date',
             'email_aluno' => 'nullable|email',
             'escola' => 'required|string',
@@ -183,57 +265,15 @@ class AlunoController extends Controller
             'telefone_aluno' => 'nullable|string',
         ]);
 
-        $dados['cpf'] = preg_replace('/[^0-9]/', '', $dados['cpf']);
-
         $aluno->update($dados);
+
+        SystemLog::create([
+            'mentor_id' => Auth::guard('mentor')->id(),
+            'acao' => 'Gestão de Alunos',
+            'descricao' => 'Editou aluno: ' . $aluno->nome_completo,
+            'ip_address' => request()->ip(),
+        ]);
+
         return back()->with('success', 'Dados do aluno atualizados com sucesso!');
-    }   
-
-    public function registerFromEcosystem(Request $request)
-    {
-        try {
-            $formData = $request->input('formData');
-            $cpf = preg_replace('/[^0-9]/', '', $formData['cpf'] ?? '');
-
-            if (empty($cpf)) {
-                return response()->json(['error' => 'CPF é obrigatório para o cadastro.'], 400);
-            }
-
-            $jaExiste = Aluno::where('cpf', $cpf)->exists();
-
-            if ($jaExiste) {
-                return response()->json([
-                    'message' => 'Identificamos que você já possui um cadastro de aluno ativo em nossa base.'
-                ], 422);
-            }
-
-            $novoAluno = Aluno::create([
-                'nome_completo'         => $formData['nome'], 
-                'email_aluno'           => $formData['email'],
-                'cpf'                   => $cpf,
-                'telefone_aluno'        => $formData['telefone'],
-                'data_nascimento'       => $formData['nascimento'],
-                'escola'                => $formData['cidade'], 
-                'serie'                 => '3_em', // Valor padrão para conversão automática
-                'nome_responsavel'      => $formData['nome_responsavel'] ?? 'Não informado',
-                'email_responsavel'     => $formData['email_responsavel'] ?? ($formData['email'] . '.resp'), 
-                'telefone_responsavel'  => $formData['telefone_responsavel'] ?? $formData['telefone'],
-                'password'              => Hash::make('12345678'), 
-                'status'                => 'ativo',
-                'tem_conhecimento_previo' => false,
-            ]);
-
-            return response()->json([
-                'message' => 'Parabéns! Sua matrícula no DevMenthors foi realizada com sucesso.',
-                'aluno'   => $novoAluno
-            ], 201);
-
-        } catch (\Exception $e) {
-            Log::error("Erro no cadastro automático via ecossistema: " . $e->getMessage());
-            return response()->json([
-                'error' => 'Erro interno ao processar cadastro.',
-                'message' => 'Não foi possível completar sua matrícula automaticamente. Tente o formulário manual.'
-            ], 500);
-        }
     }
 }

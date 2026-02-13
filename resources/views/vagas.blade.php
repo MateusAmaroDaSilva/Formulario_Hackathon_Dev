@@ -121,6 +121,10 @@
             color: #2563EB;
         }
 
+        .text-blue {
+            color: #2563EB;
+                }
+
         .hero-content p {
             font-size: 18px;
             max-width: 700px; /* Aumentado levemente para caber o novo texto */
@@ -253,7 +257,7 @@
             </h1>
 
             <p>
-                As inscrições para o Volta às Aulas não estão disponíveis no momento, mas aproveite a oportunidade e venha participar do mais novo evento do DevMenthors, o HackHealth.
+                As inscrições para o HackHealth não estão disponíveis no momento, <span class="text-blue">serão liberadas no dia 13/02/2026</span>, em conjunto disso será liberado as inscrições para o DevMenthors 2026.
             </p>
 
             <div class="buttons-container">

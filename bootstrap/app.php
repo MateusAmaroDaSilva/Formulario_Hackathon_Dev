@@ -20,6 +20,11 @@ return Application::configure(basePath: dirname(__DIR__))
             }
             return route('login.unificado'); // Fallback for standard users
         });
+        
+        // Registra middleware customizado para verificar status de mentor
+        $middleware->alias([
+            'mentor.active' => \App\Http\Middleware\CheckMentorActive::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
         //

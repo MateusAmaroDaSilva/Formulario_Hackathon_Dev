@@ -13,16 +13,17 @@ class AdminMentorController extends Controller
 {
     /**
      * Lista todos os mentores e os logs do sistema.
+     * TODOS os mentores podem visualizar.
+     * Apenas quem tem 'gerenciar_equipe' pode editar/excluir.
      */
     public function index()
     {
-        $mentores = Mentor::with('permissions')->get(); // Carrega permissões atuais
-        $logs = SystemLog::with('mentor')->latest()->take(20)->get();
+        $mentores = Mentor::with('permissions')->get();
 
         // Busca todas as permissões para exibir no modal
         $todasPermissoes = Permission::all()->groupBy('group');
 
-        return view('mentor.admin.index', compact('mentores', 'logs', 'todasPermissoes'));
+        return view('mentor.admin.index', compact('mentores', 'todasPermissoes'));
     }
 
     /**
@@ -30,6 +31,12 @@ class AdminMentorController extends Controller
      */
     public function store(Request $request)
     {
+        // Verifica permissão de gerenciar equipe
+        $user = Auth::guard('mentor')->user();
+        if (!$user->hasPermission('gerenciar_equipe')) {
+            return back()->with('error', 'Você não tem permissão para cadastrar mentores.');
+        }
+
         $request->validate([
             'nome' => 'required|string|max:255',
             'email' => 'required|email|unique:mentores,email',
@@ -56,13 +63,24 @@ class AdminMentorController extends Controller
      */
     public function update(Request $request, $id)
     {
+        // Verifica permissão de gerenciar equipe
+        $user = Auth::guard('mentor')->user();
+        if (!$user->hasPermission('gerenciar_equipe')) {
+            return back()->with('error', 'Você não tem permissão para editar mentores.');
+        }
+
         $mentor = Mentor::findOrFail($id);
 
         $request->validate([
             'nome' => 'required|string',
-            'email' => "required|email|unique:mentores,email,{$id}", // Ignora o email atual na validação unique
+            'email' => "required|email|unique:mentores,email,{$id}",
             'funcao' => 'required|string'
         ]);
+
+        // PROTEÇÃO: Impede desativar a própria conta
+        if ($user->id == $id && $request->status === 'inativo') {
+            return back()->with('error', 'Você não pode desativar sua própria conta enquanto está logado.');
+        }
 
         // Lógica para alterar senha apenas se o campo for preenchido
         if ($request->filled('password')) {
@@ -87,13 +105,20 @@ class AdminMentorController extends Controller
      */
     public function destroy($id)
     {
+        $user = Auth::guard('mentor')->user();
+        
+        // Verifica se tem permissão de gerenciar equipe
+        if (!$user->hasPermission('gerenciar_equipe')) {
+            return back()->with('error', 'Você não tem permissão para excluir mentores.');
+        }
+
         // Segurança: Impede que você exclua sua própria conta logada
-        if (Auth::guard('mentor')->id() == $id) {
+        if ($user->id == $id) {
             return back()->with('error', 'Você não pode excluir sua própria conta.');
         }
 
         $mentor = Mentor::findOrFail($id);
-        $nomeBkp = $mentor->nome; // Guarda o nome para usar no log após deletar
+        $nomeBkp = $mentor->nome;
 
         $mentor->delete();
 
@@ -118,19 +143,25 @@ class AdminMentorController extends Controller
 
     public function updatePermissions(Request $request, $id)
     {
-        // Só Admin pode dar permissões
-        if (Auth::guard('mentor')->user()->funcao !== 'Admin') {
-            abort(403, 'Apenas Admins podem gerenciar permissões.');
+        $user = Auth::guard('mentor')->user();
+        
+        // Verifica se tem permissão de gerenciar equipe
+        if (!$user->hasPermission('gerenciar_equipe')) {
+            abort(403, 'Você não tem permissão para gerenciar acessos.');
         }
 
         $mentor = Mentor::findOrFail($id);
 
-        // Sincroniza (remove as antigas e adiciona as novas marcadas)
-        // Se não vier nada no request (nenhuma marcada), ele limpa tudo.
+        // PROTEÇÃO: Não permite editar permissões de Admins
+        if ($mentor->isAdmin()) {
+            return back()->with('error', 'Administradores possuem todas as permissões automaticamente e não podem ser editadas.');
+        }
+
+        // Sincroniza permissões
         $mentor->permissions()->sync($request->permissions ?? []);
 
-        // Grava no Log (sua função de log existente)
-        $this->registrarLog('Permissões', "Alterou as permissões de acesso de: {$mentor->nome}");
+        // Grava no Log
+        $this->registrarLog('Permissões', "Alterou as permissões de: {$mentor->nome}");
 
         return back()->with('success', 'Permissões atualizadas com sucesso!');
     }

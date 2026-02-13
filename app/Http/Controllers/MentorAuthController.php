@@ -23,8 +23,20 @@ class MentorAuthController extends Controller
         ]);
 
         // 2. Tenta logar usando o GUARD 'mentor'
-        // Isso vai verificar a senha (hash) automaticamente na tabela 'mentores'
         if (Auth::guard('mentor')->attempt($credentials, $request->remember)) {
+
+            // VERIFICAÇÃO: Checa se o usuário está ativo
+            $mentor = Auth::guard('mentor')->user();
+            
+            if ($mentor->status !== 'ativo') {
+                // Desloga imediatamente
+                Auth::guard('mentor')->logout();
+                $request->session()->invalidate();
+                
+                return back()->withErrors([
+                    'email' => 'Sua conta está inativa. Entre em contato com o administrador.',
+                ])->onlyInput('email');
+            }
 
             $request->session()->regenerate();
 
