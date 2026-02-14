@@ -6,7 +6,9 @@ use App\Http\Controllers\Controller;
 use App\Models\Aula;
 use App\Models\AulaRecurso;
 use App\Models\AulaCategoria;
+use App\Models\SystemLog;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
@@ -71,6 +73,13 @@ class AulaController extends Controller
             }
         }
 
+        SystemLog::create([
+            'mentor_id' => Auth::guard('mentor')->id(),
+            'acao' => 'Gestão de Aulas',
+            'descricao' => 'Criou aula: ' . $aula->titulo,
+            'ip_address' => request()->ip(),
+        ]);
+
         return redirect()->back()->with('success', 'Aula criada com sucesso!');
     }
 
@@ -125,6 +134,13 @@ class AulaController extends Controller
             }
         }
 
+        SystemLog::create([
+            'mentor_id' => Auth::guard('mentor')->id(),
+            'acao' => 'Gestão de Aulas',
+            'descricao' => 'Editou aula: ' . $aula->titulo,
+            'ip_address' => request()->ip(),
+        ]);
+
         return redirect()->back()->with('success', 'Aula atualizada com sucesso!');
     }
 
@@ -132,10 +148,93 @@ class AulaController extends Controller
     {
         // BUSCAR PRIMEIRO (Isso permite que o Model dispare o evento de limpeza)
         $aula = Aula::findOrFail($id);
+        $tituloAula = $aula->titulo;
 
         // AO CHAMAR ISSO, O CÓDIGO DO 'booted' LÁ EM CIMA É EXECUTADO AUTOMATICAMENTE
         $aula->delete();
 
+        SystemLog::create([
+            'mentor_id' => Auth::guard('mentor')->id(),
+            'acao' => 'Gestão de Aulas',
+            'descricao' => 'Excluiu aula: ' . $tituloAula,
+            'ip_address' => request()->ip(),
+        ]);
+
         return redirect()->back()->with('success', 'Aula e arquivos removidos com sucesso!');
+    }
+
+    /**
+     * Cria nova categoria de aula
+     */
+    public function storeCategoria(Request $request)
+    {
+        $request->validate([
+            'nome' => 'required|string|max:100|unique:aula_categorias,nome',
+        ]);
+        
+        AulaCategoria::create([
+            'nome' => $request->nome,
+            'slug' => Str::slug($request->nome),
+        ]);
+        
+        SystemLog::create([
+            'mentor_id' => Auth::guard('mentor')->id(),
+            'acao' => 'Gestão de Aulas',
+            'descricao' => 'Criou categoria: ' . $request->nome,
+            'ip_address' => request()->ip(),
+        ]);
+        
+        return back()->with('success', 'Categoria criada com sucesso!');
+    }
+
+    /**
+     * Atualiza categoria existente
+     */
+    public function updateCategoria(Request $request, $id)
+    {
+        $categoria = AulaCategoria::findOrFail($id);
+        
+        $request->validate([
+            'nome' => "required|string|max:100|unique:aula_categorias,nome,{$id}",
+        ]);
+        
+        $categoria->update([
+            'nome' => $request->nome,
+            'slug' => Str::slug($request->nome),
+        ]);
+        
+        SystemLog::create([
+            'mentor_id' => Auth::guard('mentor')->id(),
+            'acao' => 'Gestão de Aulas',
+            'descricao' => 'Editou categoria: ' . $categoria->nome,
+            'ip_address' => request()->ip(),
+        ]);
+        
+        return back()->with('success', 'Categoria atualizada!');
+    }
+
+    /**
+     * Remove categoria (só se não tiver aulas vinculadas)
+     */
+    public function destroyCategoria($id)
+    {
+        $categoria = AulaCategoria::findOrFail($id);
+        
+        // Verifica se tem aulas vinculadas
+        if ($categoria->aulas()->count() > 0) {
+            return back()->with('error', 'Não é possível excluir categoria com aulas vinculadas.');
+        }
+        
+        $nomeCategoria = $categoria->nome;
+        $categoria->delete();
+        
+        SystemLog::create([
+            'mentor_id' => Auth::guard('mentor')->id(),
+            'acao' => 'Gestão de Aulas',
+            'descricao' => 'Excluiu categoria: ' . $nomeCategoria,
+            'ip_address' => request()->ip(),
+        ]);
+        
+        return back()->with('success', 'Categoria removida!');
     }
 }

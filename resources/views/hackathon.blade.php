@@ -6,7 +6,7 @@
     <img src="{{ asset('img/preto.png') }}" alt="" class="img-preto">
 
     <nav class="navbar">
-        <a href="{{ url('/') }}"><img src="{{ asset('img/parceiros/4.png') }}" alt=""></a>
+        <a href="https://devmenthors.com.br"><img src="{{ asset('img/parceiros/4.png') }}" alt=""></a>
     </nav>
 
     <div class="vagas">
@@ -40,7 +40,7 @@
                 </p>
 
                 <p>
-                    Serão dois dias intensos, nos dias <span class="azul negrito">29 e 30 de Novembro</span>,
+                    Serão dois dias intensos, nos dias <span class="azul negrito">28 de fevereiro e 1 de março</span>,
                     onde você vai se juntar a uma equipe de pessoas com a mesma paixão por inovação. O desafio é grande,
                     mas a recompensa é ainda maior: desenvolver uma solução inovadora para resolver um problema real da
                     nossa sociedade.

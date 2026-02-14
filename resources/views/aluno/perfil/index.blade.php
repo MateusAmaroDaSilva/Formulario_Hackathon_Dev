@@ -35,17 +35,17 @@
             {{-- COLUNA FOTO --}}
             <div class="lg:col-span-1 space-y-6">
                 <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 text-center relative overflow-hidden group">
-                    <div class="absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-green-50 to-white"></div>
+                    <div class="absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-slate-50 to-white"></div>
 
                     <div class="relative z-10">
-                        <div class="w-32 h-32 mx-auto rounded-full p-1 bg-white border-4 border-green-100 shadow-sm relative mb-4">
+                        <div class="w-32 h-32 mx-auto rounded-full p-1 bg-white border-4 border-slate-100 shadow-sm relative mb-4">
 
                             {{-- LÓGICA DA IMAGEM ATUALIZADA (Via Proxy Laravel) --}}
                             @if($aluno->foto)
                                 {{-- basename pega 'abc.webp' de 'fotos_alunos/abc.webp' --}}
                                 <img id="preview-foto" src="{{ route('aluno.foto.proxy', basename($aluno->foto)) }}" class="w-full h-full rounded-full object-cover">
                             @else
-                                <div id="preview-default" class="w-full h-full rounded-full bg-green-50 flex items-center justify-center text-green-600 text-3xl font-bold">
+                                <div id="preview-default" class="w-full h-full rounded-full bg-slate-50 flex items-center justify-center text-slate-600 text-3xl font-bold">
                                     {{ substr($aluno->nome_completo, 0, 2) }}
                                 </div>
                                 <img id="preview-foto" class="hidden w-full h-full rounded-full object-cover">
@@ -62,7 +62,7 @@
                     </div>
                 </div>
 
-                <button type="submit" class="w-full bg-green-600 text-white font-bold py-3.5 rounded-xl hover:bg-green-700 transition shadow-lg shadow-green-200 flex items-center justify-center gap-2">
+                <button type="submit" class="w-full bg-slate-900 text-white font-bold py-3.5 rounded-xl hover:bg-black transition shadow-lg shadow-slate-200 flex items-center justify-center gap-2">
                     <i class="fas fa-save"></i> Salvar Alterações
                 </button>
             </div>
@@ -72,18 +72,18 @@
                 {{-- (O restante do formulário permanece igual ao anterior) --}}
                 <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 md:p-8">
                     <h2 class="text-lg font-bold text-slate-800 mb-6 flex items-center gap-2">
-                        <i class="fas fa-user-edit text-green-600"></i> Informações Editáveis
+                        <i class="fas fa-user-edit text-blue-600"></i> Informações Editáveis
                     </h2>
 
                     <div class="space-y-4">
                         <div>
                             <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Nome Completo / Social</label>
-                            <input type="text" name="nome_completo" value="{{ old('nome_completo', $aluno->nome_completo) }}" class="w-full border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-green-100 focus:border-green-500 border outline-none transition bg-white text-slate-700 font-medium">
+                            <input type="text" name="nome_completo" value="{{ old('nome_completo', $aluno->nome_completo) }}" class="w-full border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-blue-100 focus:border-blue-500 border outline-none transition bg-white text-slate-700 font-medium">
                         </div>
 
                         <div>
                             <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Meu Telefone / WhatsApp</label>
-                            <input type="text" name="telefone_aluno" value="{{ old('telefone_aluno', $aluno->telefone_aluno) }}" placeholder="(00) 00000-0000" class="w-full border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-green-100 focus:border-green-500 border outline-none transition bg-white text-slate-700 font-medium">
+                            <input type="text" name="telefone_aluno" value="{{ old('telefone_aluno', $aluno->telefone_aluno) }}" placeholder="(00) 00000-0000" class="w-full border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-blue-100 focus:border-blue-500 border outline-none transition bg-white text-slate-700 font-medium">
                         </div>
                     </div>
                 </div>

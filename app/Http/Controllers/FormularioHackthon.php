@@ -11,7 +11,7 @@ class FormularioHackthon extends Controller
 {
     public function store(Request $request)
     {
-        $limiteVagas = 300;
+        $limiteVagas = 0;
 
         // Verifica se já atingiu o limite ANTES de validar ou salvar qualquer coisa
         if (FormSubmission::count() >= $limiteVagas) {
@@ -28,7 +28,7 @@ class FormularioHackthon extends Controller
     public function index()
     {
         // 1. Configuração do limite
-        $limiteVagas = 300;
+        $limiteVagas = 0;
 
         // 2. Contagem atual do banco de dados
         $totalInscritos = FormSubmission::count();

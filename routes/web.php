@@ -17,8 +17,8 @@ use App\Http\Controllers\ChamadaController;
 use App\Http\Controllers\FotoController;
 use App\Http\Controllers\MaterialController;
 use App\Http\Controllers\MentorDashboardController;
+use App\Http\Controllers\SystemLogController;
 use App\Models\FormSubmission;
-use Illuminate\Support\Facades\Http;
 
 /*
 |--------------------------------------------------------------------------
@@ -39,7 +39,7 @@ Route::get('/hackhealth', [FormularioHackthon::class, 'index'])->name('hackathon
 
 // Lógica de Inscrição Geral (Vagas)
 Route::get('/inscricao', function () {
-    $limiteVagas = 300;
+    $limiteVagas = 0;
     $totalInscritos = FormSubmission::count();
     $vagasEsgotadas = $totalInscritos >= $limiteVagas;
     return view('inscricao', compact('vagasEsgotadas'));
@@ -48,8 +48,6 @@ Route::get('/inscricao', function () {
 // Cadastro de Novos Alunos (Público)
 Route::get('/inscricao-aluno', [AlunoController::class, 'create'])->name('aluno.create');
 Route::post('/inscricao-aluno', [AlunoController::class, 'store'])->name('aluno.store');
-
-Route::post('/inscricao-aluno-automatica', [AlunoController::class, 'registerFromEcosystem'])->name('aluno.register_ecosystem');
 
 // Cadastro de Mentores (Público - Se for self-service)
 Route::get('hackathon/mentor/cadastrar', [HacktonMentores::class, 'create'])->name('hackathon.mentor.create');
@@ -87,7 +85,7 @@ Route::post('portal/logout', [AlunoController::class, 'logout'])->name('aluno.lo
 | 3. ÁREA DO MENTOR (Acesso Restrito: auth:mentor)
 |--------------------------------------------------------------------------
 */
-Route::middleware(['auth:mentor'])->prefix('admin')->group(function () {
+Route::middleware(['auth:mentor', 'mentor.active'])->prefix('admin')->group(function () {
 
     // Dashboard Principal do Mentor
     Route::get('/dashboard', [MentorDashboardController::class, 'index'])
@@ -98,7 +96,7 @@ Route::middleware(['auth:mentor'])->prefix('admin')->group(function () {
 
 
     // --- Gestão de Alunos ---
-    Route::prefix('alunos')->group(function () {
+    Route::prefix('alunos')->middleware('can:manage_alunos')->group(function () {
         Route::get('/', [AlunoController::class, 'index'])->name('admin.alunos.index');
         Route::get('/export', [AlunoController::class, 'export'])->name('admin.alunos.export');
         Route::get('/template', [AlunoController::class, 'downloadTemplate'])->name('admin.alunos.template');
@@ -131,8 +129,11 @@ Route::middleware(['auth:mentor'])->prefix('admin')->group(function () {
     });
 
     // --- Gestão de Mentores ---
-    Route::prefix('mentores')->middleware('can:manage_mentores')->group(function () {
-        Route::get('/', [AdminMentorController::class, 'index'])->name('admin.mentores.index');
+    // Visualização: Todos podem ver
+    Route::get('mentores', [AdminMentorController::class, 'index'])->name('admin.mentores.index');
+    
+    // Ações de modificação: Verificação de permissão no controller
+    Route::prefix('mentores')->group(function () {
         Route::post('/', [AdminMentorController::class, 'store'])->name('admin.mentores.store');
         Route::put('/{id}', [AdminMentorController::class, 'update'])->name('admin.mentores.update');
         Route::delete('/{id}', [AdminMentorController::class, 'destroy'])->name('admin.mentores.destroy');
@@ -153,7 +154,16 @@ Route::middleware(['auth:mentor'])->prefix('admin')->group(function () {
         Route::post('/', [AulaController::class, 'store'])->name('admin.aulas.store');
         Route::put('/{id}', [AulaController::class, 'update'])->name('admin.aulas.update');
         Route::delete('/{id}', [AulaController::class, 'destroy'])->name('admin.aulas.destroy');
+        
+        // Rotas para gerenciar categorias de aulas
+        Route::post('/categorias', [AulaController::class, 'storeCategoria'])->name('admin.aulas.categorias.store');
+        Route::put('/categorias/{id}', [AulaController::class, 'updateCategoria'])->name('admin.aulas.categorias.update');
+        Route::delete('/categorias/{id}', [AulaController::class, 'destroyCategoria'])->name('admin.aulas.categorias.destroy');
     });
+    
+    // --- Logs de Auditoria (apenas Admin) ---
+    Route::get('/logs', [SystemLogController::class, 'index'])->name('admin.logs.index');
+    
     Route::get('/metricas', function() { return view('mentor.metricas.index'); })->name('admin.metricas.index');
 
 
@@ -189,19 +199,5 @@ Route::prefix('aluno')->name('aluno.')->middleware('auth:aluno')->group(function
     Route::post('/avisos/{id}/like', [AlunoAvisoController::class, 'toggleLike'])->name('avisos.like');
 });
 
-    Route::middleware(['auth:aluno'])->get('/presenca/registrar/{chamada_id}', [ChamadaController::class, 'registrarPresenca'])
-        ->name('aluno.presenca.registrar');
-
-    // Rota do Ecossitema
-    Route::get('/ecossistema', function () {
-        return view('ecossistema');
-    })->name('ecossistema');
-
-
-Route::get('/descobrir-grupos', function () {
-    $response = Http::withHeaders([
-        'apikey' => env('WHATSAPP_INSTANCE_TOKEN')
-    ])->get(env('WHATSAPP_API_URL') . "/group/fetchAllGroups/" . env('WHATSAPP_INSTANCE_NAME'));
-
-    return $response->json();
-});
+Route::middleware(['auth:aluno'])->get('/presenca/registrar/{chamada_id}', [ChamadaController::class, 'registrarPresenca'])
+    ->name('aluno.presenca.registrar');

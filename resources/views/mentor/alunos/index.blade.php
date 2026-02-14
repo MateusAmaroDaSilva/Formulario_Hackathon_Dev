@@ -57,6 +57,7 @@
                         <th class="p-5 text-xs font-bold text-slate-500 uppercase tracking-wider">Aluno / Série</th>
                         <th class="p-5 text-xs font-bold text-slate-500 uppercase tracking-wider">Responsável</th>
                         <th class="p-5 text-xs font-bold text-slate-500 uppercase tracking-wider text-center">Conhecimento</th>
+                        <th class="p-5 text-xs font-bold text-slate-500 uppercase tracking-wider text-center">Frequência</th>
                         <th class="p-5 text-xs font-bold text-slate-500 uppercase tracking-wider text-right">Ações</th>
                     </tr>
                 </thead>
@@ -65,9 +66,17 @@
                     <tr class="hover:bg-slate-50/50 transition group">
                         <td class="p-5">
                             <div class="flex items-center gap-3">
-                                <div class="w-10 h-10 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center font-bold text-sm">
-                                    {{ substr($aluno->nome_completo, 0, 2) }}
-                                </div>
+                                {{-- Foto do Aluno via Proxy ou Avatar com iniciais --}}
+                                @if($aluno->foto)
+                                    <img src="{{ route('aluno.foto.proxy', basename($aluno->foto)) }}"
+                                         class="w-10 h-10 rounded-full object-cover border border-slate-200 shadow-sm"
+                                         onerror="this.src='http://ui-avatars.com/api/?name={{ urlencode($aluno->nome_completo) }}&background=random'"
+                                         alt="Foto de {{ $aluno->nome_completo }}">
+                                @else
+                                    <div class="w-10 h-10 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center font-bold text-sm border border-blue-200">
+                                        {{ substr($aluno->nome_completo, 0, 2) }}
+                                    </div>
+                                @endif
                                 <div>
                                     <div class="font-bold text-slate-800">{{ $aluno->nome_completo }}</div>
                                     <div class="text-xs text-slate-500">
@@ -90,7 +99,28 @@
                             @if($aluno->tem_conhecimento_previo)
                                 <span class="bg-green-100 text-green-700 text-[10px] font-bold px-2 py-1 rounded-full uppercase">Sim</span>
                             @else
-                                <span class="bg-slate-100 text-slate-500 text-[10px] font-bold px-2 py-1 rounded-full uppercase">Não</span>
+                                <span class="bg-slate-100 text-slate-600 text-[10px] font-bold px-2 py-1 rounded-full uppercase">Não</span>
+                            @endif
+                        </td>
+
+                        {{-- Coluna de Frequência --}}
+                        <td class="p-5 text-center">
+                            @if($totalChamadas > 0)
+                                @php
+                                    $frequencia = ($aluno->presencas_count / $totalChamadas) * 100;
+                                    $corClasse = $frequencia < 75 ? 'text-red-500' :
+                                                ($frequencia <= 80 ? 'text-amber-500' : 'text-green-500');
+                                @endphp
+                                <div class="flex flex-col items-center gap-1">
+                                    <span class="{{ $corClasse }} text-sm font-bold">
+                                        {{ number_format($frequencia, 1) }}%
+                                    </span>
+                                    <span class="text-slate-500 text-xs">
+                                        {{ $aluno->presencas_count }}/{{ $totalChamadas }} aulas
+                                    </span>
+                                </div>
+                            @else
+                                <span class="text-slate-400 text-xs">N/A</span>
                             @endif
                         </td>
 

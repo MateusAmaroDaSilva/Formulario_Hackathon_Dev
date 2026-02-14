@@ -9,6 +9,11 @@ class Aula extends Model
 {
     protected $fillable = ['aula_categoria_id', 'titulo', 'descricao', 'data_prevista', 'publicada'];
 
+    protected $casts = [
+        'data_prevista' => 'date:Y-m-d',
+        'publicada' => 'boolean',
+    ];
+
     // Relacionamentos
     public function categoria()
     {
