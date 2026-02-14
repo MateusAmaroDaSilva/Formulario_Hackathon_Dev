@@ -23,13 +23,7 @@ class AdminMentorController extends Controller
         // Busca todas as permissões para exibir no modal
         $todasPermissoes = Permission::all()->groupBy('group');
 
-        // Busca os logs do sistema com o relacionamento do mentor
-        $logs = SystemLog::with('mentor')
-            ->orderBy('created_at', 'desc')
-            ->limit(50)
-            ->get();
-
-        return view('mentor.admin.index', compact('mentores', 'todasPermissoes', 'logs'));
+        return view('mentor.admin.index', compact('mentores', 'todasPermissoes'));
     }
 
     /**
@@ -37,9 +31,9 @@ class AdminMentorController extends Controller
      */
     public function store(Request $request)
     {
-        // Verifica permissão de gerenciar equipe
+        // Verifica permissão de gerenciar mentoes
         $user = Auth::guard('mentor')->user();
-        if (!$user->hasPermission('gerenciar_equipe')) {
+        if (!$user->hasPermission('manage_mentores')) {
             return back()->with('error', 'Você não tem permissão para cadastrar mentores.');
         }
 
@@ -69,19 +63,33 @@ class AdminMentorController extends Controller
      */
     public function update(Request $request, $id)
     {
-        // Verifica permissão de gerenciar equipe
         $user = Auth::guard('mentor')->user();
-        if (!$user->hasPermission('gerenciar_equipe')) {
+        
+        // Verifica permissão de manage_mentores
+        if (!$user->hasPermission('manage_mentores')) {
             return back()->with('error', 'Você não tem permissão para editar mentores.');
         }
 
         $mentor = Mentor::findOrFail($id);
+        $isAdmin = $user->funcao === 'Admin';
 
+        // PROTEÇÃO: Não-Admins não podem editar Admins
+        if ($mentor->funcao === 'Admin' && !$isAdmin) {
+            return back()->with('error', 'Apenas administradores podem editar outros administradores.');
+        }
+
+        // Validação básica (nome sempre necessário)
         $request->validate([
             'nome' => 'required|string',
-            'email' => "required|email|unique:mentores,email,{$id}",
-            'funcao' => 'required|string'
         ]);
+        
+        // Se for Admin, valida email e função também
+        if ($isAdmin) {
+            $request->validate([
+                'email' => "required|email|unique:mentores,email,{$id}",
+                'funcao' => 'required|string'
+            ]);
+        }
 
         // PROTEÇÃO: Impede desativar a própria conta
         if ($user->id == $id && $request->status === 'inativo') {
@@ -93,12 +101,19 @@ class AdminMentorController extends Controller
             $mentor->password = Hash::make($request->password);
         }
 
-        $mentor->update([
+        // Monta array de atualização
+        $updateData = [
             'nome' => $request->nome,
-            'email' => $request->email,
-            'funcao' => $request->funcao,
             'status' => $request->status ?? $mentor->status,
-        ]);
+        ];
+        
+        // Apenas Admin pode atualizar email e função
+        if ($isAdmin) {
+            $updateData['email'] = $request->email;
+            $updateData['funcao'] = $request->funcao;
+        }
+
+        $mentor->update($updateData);
 
         // Grava no Log
         $this->registrarLog('Edição', "Atualizou dados do mentor: {$mentor->nome}");
@@ -113,8 +128,8 @@ class AdminMentorController extends Controller
     {
         $user = Auth::guard('mentor')->user();
         
-        // Verifica se tem permissão de gerenciar equipe
-        if (!$user->hasPermission('gerenciar_equipe')) {
+        // Verifica se tem permissão de manage_mentores
+        if (!$user->hasPermission('manage_mentores')) {
             return back()->with('error', 'Você não tem permissão para excluir mentores.');
         }
 
@@ -124,6 +139,12 @@ class AdminMentorController extends Controller
         }
 
         $mentor = Mentor::findOrFail($id);
+        
+        // PROTEÇÃO: Não-Admins não podem excluir Admins
+        if ($mentor->funcao === 'Admin' && $user->funcao !== 'Admin') {
+            return back()->with('error', 'Apenas administradores podem excluir outros administradores.');
+        }
+        
         $nomeBkp = $mentor->nome;
 
         $mentor->delete();

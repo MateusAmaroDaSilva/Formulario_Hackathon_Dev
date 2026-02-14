@@ -57,6 +57,7 @@
                         <th class="p-5 text-xs font-bold text-slate-500 uppercase tracking-wider">Aluno / Série</th>
                         <th class="p-5 text-xs font-bold text-slate-500 uppercase tracking-wider">Responsável</th>
                         <th class="p-5 text-xs font-bold text-slate-500 uppercase tracking-wider text-center">Conhecimento</th>
+                        <th class="p-5 text-xs font-bold text-slate-500 uppercase tracking-wider text-center">Frequência</th>
                         <th class="p-5 text-xs font-bold text-slate-500 uppercase tracking-wider text-right">Ações</th>
                     </tr>
                 </thead>
@@ -98,7 +99,28 @@
                             @if($aluno->tem_conhecimento_previo)
                                 <span class="bg-green-100 text-green-700 text-[10px] font-bold px-2 py-1 rounded-full uppercase">Sim</span>
                             @else
-                                <span class="bg-slate-100 text-slate-500 text-[10px] font-bold px-2 py-1 rounded-full uppercase">Não</span>
+                                <span class="bg-slate-100 text-slate-600 text-[10px] font-bold px-2 py-1 rounded-full uppercase">Não</span>
+                            @endif
+                        </td>
+
+                        {{-- Coluna de Frequência --}}
+                        <td class="p-5 text-center">
+                            @if($totalChamadas > 0)
+                                @php
+                                    $frequencia = ($aluno->presencas_count / $totalChamadas) * 100;
+                                    $corClasse = $frequencia < 75 ? 'text-red-500' :
+                                                ($frequencia <= 80 ? 'text-amber-500' : 'text-green-500');
+                                @endphp
+                                <div class="flex flex-col items-center gap-1">
+                                    <span class="{{ $corClasse }} text-sm font-bold">
+                                        {{ number_format($frequencia, 1) }}%
+                                    </span>
+                                    <span class="text-slate-500 text-xs">
+                                        {{ $aluno->presencas_count }}/{{ $totalChamadas }} aulas
+                                    </span>
+                                </div>
+                            @else
+                                <span class="text-slate-400 text-xs">N/A</span>
                             @endif
                         </td>
 

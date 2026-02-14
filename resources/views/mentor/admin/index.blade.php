@@ -9,17 +9,10 @@
             <p class="text-gray-500 text-sm">Gerencie quem tem acesso ao painel.</p>
         </div>
 
-        <div class="flex gap-3">
-            <button onclick="openModal('modal-logs')"
-                    class="bg-gray-200 text-gray-700 px-4 py-2 rounded hover:bg-gray-300 shadow flex items-center gap-2 transition">
-                <i class="fas fa-history"></i> Logs de Auditoria
-            </button>
-
-            <button onclick="openModal('modal-novo-mentor')"
-                    class="bg-slate-800 text-white px-4 py-2 rounded hover:bg-slate-900 shadow flex items-center gap-2 transition">
-                <i class="fas fa-user-plus"></i> Novo Mentor
-            </button>
-        </div>
+        <button onclick="openModal('modal-novo-mentor')"
+                class="bg-slate-800 text-white px-4 py-2 rounded hover:bg-slate-900 shadow flex items-center gap-2 transition">
+            <i class="fas fa-user-plus"></i> Novo Mentor
+        </button>
     </header>
 
     <div class="bg-white rounded-lg shadow overflow-hidden mb-10">
@@ -49,11 +42,23 @@
                         @endif
 
                         <div>
-                            <p class="font-bold text-gray-800">{{ $m->nome }}</p>
+                            <p class="font-bold text-gray-800 flex items-center gap-2">
+                                {{ $m->nome }}
+                                @if($m->funcao === 'Admin')
+                                @endif
+                            </p>
                             <p class="text-xs text-gray-500">{{ $m->email }}</p>
                         </div>
                     </td>
-                    <td class="p-4 text-sm text-gray-600">{{ $m->funcao }}</td>
+                    <td class="p-4 text-sm">
+                        @if($m->funcao === 'Admin')
+                            <span class="px-2 py-1 rounded-full text-xs font-bold bg-purple-100 text-purple-700 flex items-center gap-1 w-fit">
+                                <i class="fas fa-crown"></i> {{ $m->funcao }}
+                            </span>
+                        @else
+                            <span class="text-gray-600">{{ $m->funcao }}</span>
+                        @endif
+                    </td>
                     <td class="p-4">
                         <span class="px-2 py-1 rounded-full text-xs font-bold {{ $m->status == 'ativo' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700' }}">
                             {{ ucfirst($m->status) }}
@@ -67,18 +72,54 @@
                             </button>
                         @endif
 
-                        <button onclick="openEditMentor({{ $m->id }}, '{{ $m->nome }}', '{{ $m->email }}', '{{ $m->funcao }}', '{{ $m->status }}')"
-                                class="text-blue-500 hover:bg-blue-100 p-2 rounded transition" title="Editar">
-                            <i class="fas fa-edit"></i>
-                        </button>
-
-                        @if(Auth::guard('mentor')->id() !== $m->id)
-                            <form action="{{ route('admin.mentores.destroy', $m->id) }}" method="POST" class="inline-block" onsubmit="return confirm('ATENÇÃO: Isso removerá o acesso deste mentor. Continuar?')">
-                                @csrf @method('DELETE')
-                                <button class="text-red-500 hover:bg-red-100 p-2 rounded transition" title="Remover">
-                                    <i class="fas fa-trash-alt"></i>
+                        {{-- Botão EDITAR: Apenas se tiver permissão manage_mentores --}}
+                        @if(Auth::guard('mentor')->user()->hasPermission('manage_mentores'))
+                            @php
+                                $podeEditar = true;
+                                $isAdmin = Auth::guard('mentor')->user()->funcao === 'Admin';
+                                
+                                // Não-Admins não podem editar Admins
+                                if ($m->funcao === 'Admin' && !$isAdmin) {
+                                    $podeEditar = false;
+                                }
+                            @endphp
+                            
+                            @if($podeEditar)
+                                <button onclick="openEditMentor({{ $m->id }}, '{{ $m->nome }}', '{{ $m->email }}', '{{ $m->funcao }}', '{{ $m->status }}')"
+                                        class="text-blue-500 hover:bg-blue-100 p-2 rounded transition" title="Editar">
+                                    <i class="fas fa-edit"></i>
                                 </button>
-                            </form>
+                            @else
+                                <span class="text-gray-300 p-2 cursor-not-allowed" title="Apenas Admins podem editar outros Admins">
+                                    <i class="fas fa-edit"></i>
+                                </span>
+                            @endif
+                        @endif
+
+                        {{-- Botão EXCLUIR: Apenas se tiver permissão manage_mentores E não for excluir a si mesmo --}}
+                        @if(Auth::guard('mentor')->user()->hasPermission('manage_mentores') && Auth::guard('mentor')->id() !== $m->id)
+                            @php
+                                $podeExcluir = true;
+                                $isAdmin = Auth::guard('mentor')->user()->funcao === 'Admin';
+                                
+                                // Não-Admins não podem excluir Admins
+                                if ($m->funcao === 'Admin' && !$isAdmin) {
+                                    $podeExcluir = false;
+                                }
+                            @endphp
+                            
+                            @if($podeExcluir)
+                                <form action="{{ route('admin.mentores.destroy', $m->id) }}" method="POST" class="inline-block" onsubmit="return confirm('ATENÇÃO: Isso removerá o acesso deste mentor. Continuar?')">
+                                    @csrf @method('DELETE')
+                                    <button class="text-red-500 hover:bg-red-100 p-2 rounded transition" title="Remover">
+                                        <i class="fas fa-trash-alt"></i>
+                                    </button>
+                                </form>
+                            @else
+                                <span class="text-gray-300 p-2 cursor-not-allowed" title="Apenas Admins podem excluir outros Admins">
+                                    <i class="fas fa-trash-alt"></i>
+                                </span>
+                            @endif
                         @endif
                     </td>
                 </tr>
@@ -138,12 +179,16 @@
                     <label class="block text-sm font-bold text-gray-700 mb-1">Nome</label>
                     <input type="text" name="nome" id="edit_nome" required class="w-full border rounded p-2">
                 </div>
-                <div class="mb-3">
+                
+                {{-- EMAIL: Apenas Admin pode editar --}}
+                <div class="mb-3" id="email-field-container">
                     <label class="block text-sm font-bold text-gray-700 mb-1">Email</label>
                     <input type="email" name="email" id="edit_email" required class="w-full border rounded p-2">
                 </div>
+                
                 <div class="grid grid-cols-2 gap-3 mb-3">
-                    <div>
+                    {{-- FUNÇÃO: Apenas Admin pode editar --}}
+                    <div id="funcao-field-container">
                         <label class="block text-sm font-bold text-gray-700 mb-1">Função</label>
                         <select name="funcao" id="edit_funcao" class="w-full border rounded p-2">
                             <option value="Mentor">Mentor</option>
@@ -209,58 +254,41 @@
         </div>
     </div>
 
-    {{-- Modal Logs de Auditoria --}}
-    <div id="modal-logs" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center backdrop-blur-sm">
-        <div class="bg-white rounded-lg shadow-xl w-full max-w-2xl mx-4 max-h-[80vh] flex flex-col">
-            <div class="bg-gray-200 text-gray-800 px-6 py-4 flex justify-between items-center rounded-t-lg border-b border-gray-300">
-                <h3 class="font-bold flex items-center gap-2"><i class="fas fa-history"></i> Logs de Auditoria</h3>
-                <button onclick="closeModal('modal-logs')" class="text-gray-500 hover:text-gray-800">&times;</button>
-            </div>
 
-            <div class="p-6 overflow-y-auto flex-1">
-                <ul class="space-y-4">
-                    @forelse($logs as $log)
-                        <li class="flex items-start gap-4 text-sm border-b border-gray-100 pb-3 last:border-0">
-                            {{-- Foto de quem fez a ação no log --}}
-                            @if($log->mentor)
-                                <img src="{{ $log->mentor->foto_url }}"
-                                     class="w-8 h-8 rounded-full object-cover mt-1"
-                                     onerror="this.src='https://ui-avatars.com/api/?name=S&background=random'">
-                            @else
-                                <div class="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center mt-1">
-                                    <i class="fas fa-robot text-xs text-gray-400"></i>
-                                </div>
-                            @endif
-
-                            <div class="flex-1">
-                                <div class="flex justify-between">
-                                    <span class="font-bold text-gray-800">{{ $log->mentor->nome ?? 'Sistema' }}</span>
-                                    <span class="text-xs text-gray-400">{{ $log->created_at->format('d/m/Y H:i') }}</span>
-                                </div>
-                                <p class="text-gray-600 mt-1">{{ $log->descricao }}</p>
-                            </div>
-                        </li>
-                    @empty
-                        <li class="text-gray-400 text-center py-4">Nenhum registro encontrado.</li>
-                    @endforelse
-                </ul>
-            </div>
-            <div class="bg-gray-50 px-6 py-3 rounded-b-lg border-t text-right">
-                <button onclick="closeModal('modal-logs')" class="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 text-sm font-bold">Fechar</button>
-            </div>
-        </div>
-    </div>
 
     <script>
         function openModal(id) { document.getElementById(id).classList.remove('hidden'); }
         function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
 
         function openEditMentor(id, nome, email, funcao, status) {
+            const userFuncao = '{{ Auth::guard('mentor')->user()->funcao }}';
+            const isAdmin = userFuncao === 'Admin';
+            
+            // Preenche formulário
             document.getElementById('edit_nome').value = nome;
             document.getElementById('edit_email').value = email;
             document.getElementById('edit_funcao').value = funcao;
             document.getElementById('edit_status').value = status;
             document.getElementById('form-editar-mentor').action = "{{ route('admin.mentores.index') }}/" + id;
+            
+            // Se NÃO for Admin, esconde campos de email e função
+            const emailContainer = document.getElementById('email-field-container');
+            const funcaoContainer = document.getElementById('funcao-field-container');
+            
+            if (!isAdmin) {
+                // Esconde visualmente email e função
+                emailContainer.style.display = 'none';
+                funcaoContainer.style.display = 'none';
+                
+                // Remove o atributo 'required' do email para não bloquear submit
+                document.getElementById('edit_email').removeAttribute('required');
+            } else {
+                // Admin vê tudo
+                emailContainer.style.display = 'block';
+                funcaoContainer.style.display = 'block';
+                document.getElementById('edit_email').setAttribute('required', 'required');
+            }
+            
             openModal('modal-editar-mentor');
         }
 
